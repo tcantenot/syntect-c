@@ -58,7 +58,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilts-windows
-          path: lib/windows-x86_64/
+          path: lib/windows-*/
 
   commit:
     needs: [linux, macos, windows]

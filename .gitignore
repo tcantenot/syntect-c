@@ -1,0 +1,5 @@
+build/
+rust/target/
+*.stamp
+*.swp
+.DS_Store

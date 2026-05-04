@@ -1,0 +1,2 @@
+# Drop the pre-built library for windows-x86_64 here.
+# Run scripts/build-syntect.sh (or .ps1 on Windows) to generate it.

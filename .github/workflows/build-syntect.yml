@@ -1,0 +1,81 @@
+name: Build syntect-c prebuilts
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'rust/src/**'
+      - 'rust/Cargo.toml'
+      - 'rust/Cargo.lock'
+      - 'scripts/**'
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu,aarch64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - run: bash scripts/build-syntect.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prebuilts-linux
+          path: lib/linux-*/
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - run: bash scripts/build-syntect.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prebuilts-macos
+          path: lib/macos-*/
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - shell: pwsh
+        run: .\scripts\build-syntect.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prebuilts-windows
+          path: lib/windows-x86_64/
+
+  commit:
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: prebuilts-*
+          merge-multiple: true
+          path: lib/
+      - name: Commit and push
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add lib/
+          git diff --cached --quiet || git commit -m "ci: update pre-built syntect-c libraries"
+          git push

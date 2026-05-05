@@ -14,11 +14,13 @@ syntect = { version = "5.3.0", default-features = false, features = [
     "regex-onig",
 ] }
 
+# Favor minimal binary size
+# https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.release]
-opt-level       = "z"      # minimize binary size
+opt-level       = "s"       # Optimize for binary size
 lto             = true
 codegen-units   = 1
-debug           = true      # generate DWARF/PDB; build scripts extract it before stripping
-strip           = "none"    # stripping is done in build scripts so .debug files can be saved first
-split-debuginfo = "packed"  # Windows: /Zi → separate .pdb; macOS: dsymutil; Linux: no-op
-panic           = "abort"   # safe for C FFI (panics must never cross the boundary); removes unwind machinery
+debug           = true      # Embed DWARF/PDB
+strip           = "none"
+split-debuginfo = "off"     # Keep debug info inside the .a/.lib
+panic           = "abort"   # Removes unwind machinery

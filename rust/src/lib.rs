@@ -7,7 +7,7 @@ use syntect::util::{as_24_bit_terminal_escaped, LinesWithEndings};
 
 pub struct SyntectCtx { ss: SyntaxSet, ts: ThemeSet }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn syntect_new() -> *mut SyntectCtx {
     Box::into_raw(Box::new(SyntectCtx {
         ss: SyntaxSet::load_defaults_newlines(),
@@ -15,12 +15,12 @@ pub extern "C" fn syntect_new() -> *mut SyntectCtx {
     }))
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn syntect_free(ctx: *mut SyntectCtx) {
     if !ctx.is_null() { unsafe { drop(Box::from_raw(ctx)) }; }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn syntect_highlight(
     ctx: *const SyntectCtx, code: *const c_char,
     extension: *const c_char, theme_name: *const c_char,
@@ -47,12 +47,12 @@ pub extern "C" fn syntect_highlight(
     match CString::new(out) { Ok(s) => s.into_raw(), Err(_) => std::ptr::null_mut() }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn syntect_free_string(s: *mut c_char) {
     if !s.is_null() { unsafe { drop(CString::from_raw(s)) }; }
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn syntect_list_themes(ctx: *const SyntectCtx, buf: *mut c_char, buf_len: usize) -> i64 {
     if ctx.is_null() || buf.is_null() { return -1; }
     let ctx = unsafe { &*ctx };
@@ -61,7 +61,7 @@ pub extern "C" fn syntect_list_themes(ctx: *const SyntectCtx, buf: *mut c_char, 
     write_buf(names.join("\n").as_bytes(), buf, buf_len)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn syntect_list_extensions(ctx: *const SyntectCtx, buf: *mut c_char, buf_len: usize) -> i64 {
     if ctx.is_null() || buf.is_null() { return -1; }
     let ctx = unsafe { &*ctx };

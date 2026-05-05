@@ -15,7 +15,9 @@ syntect = { version = "5", default-features = false, features = [
 ] }
 
 [profile.release]
-opt-level     = 3
+opt-level     = "z"      # minimize binary size
 lto           = true
 codegen-units = 1
-strip         = "symbols"
+debug         = true     # generate DWARF/PDB; build scripts extract it before stripping
+strip         = "none"   # stripping is done in build scripts so .debug files can be saved first
+panic         = "abort"  # safe for C FFI (panics must never cross the boundary); removes unwind machinery

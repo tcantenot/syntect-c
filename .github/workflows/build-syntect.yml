@@ -22,10 +22,17 @@ jobs:
         with:
           workspaces: rust
       - run: bash scripts/build-syntect.sh
+      # Stripped libraries
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilts-linux
-          path: lib/linux-*/
+          path: lib/linux-*/libsyntect_c.a
+      # Debug symbols
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debug-linux
+          path: lib/linux-*/*.debug
+          if-no-files-found: warn
 
   macos:
     runs-on: macos-latest
@@ -38,10 +45,17 @@ jobs:
         with:
           workspaces: rust
       - run: bash scripts/build-syntect.sh
+      # Stripped libraries
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilts-macos
-          path: lib/macos-*/
+          path: lib/macos-*/libsyntect_c.a
+      # Debug symbols
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debug-macos
+          path: lib/macos-*/*.debug
+          if-no-files-found: warn
 
   windows:
     runs-on: windows-latest
@@ -55,10 +69,17 @@ jobs:
           workspaces: rust
       - shell: pwsh
         run: .\scripts\build-syntect.ps1
+      # Stripped library
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilts-windows
-          path: lib/windows-*/
+          path: lib/windows-*/syntect_c.lib
+      # PDB debug symbols
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debug-windows
+          path: lib/windows-*/*.pdb
+          if-no-files-found: warn
 
   commit:
     needs: [linux, macos, windows]
@@ -67,9 +88,16 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      # Download stripped libraries
       - uses: actions/download-artifact@v4
         with:
           pattern: prebuilts-*
+          merge-multiple: true
+          path: lib/
+      # Download debug artifacts into the same lib/ tree alongside the stripped libs
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: debug-*
           merge-multiple: true
           path: lib/
       - name: Commit and push

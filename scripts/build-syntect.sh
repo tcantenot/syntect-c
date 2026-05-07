@@ -11,7 +11,7 @@
 #
 # Requirements:
 #   - Rust toolchain (https://rustup.rs)
-#   - Linux: sudo apt install gcc-aarch64-linux-gnu binutils
+#   - Linux: sudo apt install gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
 #   - macOS: Xcode command-line tools
 set -euo pipefail
 
@@ -35,11 +35,11 @@ build() {
 }
 
 split_debug_linux() {
-    local so="$1"
+    local so="$1" objcopy_bin="${2:-objcopy}"
     local dbg="${so}.debug"
     yellow "-> Splitting debug info: $so"
-    objcopy --only-keep-debug "$so" "$dbg"
-    objcopy --strip-debug --add-gnu-debuglink="$dbg" "$so"
+    "$objcopy_bin" --only-keep-debug "$so" "$dbg"
+    "$objcopy_bin" --strip-debug --add-gnu-debuglink="$dbg" "$so"
     green "   $dbg"
     green "   $so (stripped)"
 }
@@ -60,7 +60,7 @@ if [[ "$HOST" == "Linux" ]]; then
 
     if command -v aarch64-linux-gnu-gcc &>/dev/null; then
         build aarch64-unknown-linux-gnu linux-aarch64 libsyntect_c.a libsyntect_c.so
-        split_debug_linux "$LIB_OUT/linux-aarch64/libsyntect_c.so"
+        split_debug_linux "$LIB_OUT/linux-aarch64/libsyntect_c.so" aarch64-linux-gnu-objcopy
     else
         yellow "Skipping linux-aarch64 (install gcc-aarch64-linux-gnu)"
     fi

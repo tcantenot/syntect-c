@@ -50,15 +50,63 @@ Actions → "Build syntect-c prebuilts" → "Run workflow".
 
 ## API
 
+### Lifecycle
+
 | Function | Description |
 |---|---|
-| `syntect_new()` | Create a highlighter context |
-| `syntect_free(ctx)` | Destroy a context |
-| `syntect_highlight(ctx, code, ext, theme)` | Highlight code, returns ANSI string |
-| `syntect_free_string(s)` | Free a highlighted string |
-| `syntect_list_themes(ctx, buf, len)` | List available theme names |
-| `syntect_list_extensions(ctx, buf, len)` | List supported file extensions |
+| `syntect_new()` | Create a highlighter context with built-in syntaxes and themes. Returns an owned pointer — must be freed with `syntect_free()`. |
+| `syntect_free(ctx)` | Destroy a context and free its memory. Safe to call with NULL. |
 
-Built-in themes: `base16-ocean.dark`, `base16-ocean.light`,
-`base16-eighties.dark`, `base16-mocha.dark`, `InspiredGitHub`,
-`Solarized (dark)`, `Solarized (light)`.
+### Highlighting
+
+| Function | Description |
+|---|---|
+| `syntect_highlight(ctx, code, ext, theme)` | Highlight `code` using the syntax for `ext` and the named `theme`. Returns a heap-allocated ANSI 24-bit color string, or NULL on error. Falls back to plain text if the extension is not recognised. Must be freed with `syntect_free_string()`. |
+| `syntect_free_string(s)` | Free a string returned by `syntect_highlight()`. Safe to call with NULL. |
+
+### Themes
+
+| Function | Description |
+|---|---|
+| `syntect_list_themes(ctx, buf, len)` | Write a newline-separated, sorted list of available theme names into `buf`. Returns bytes written or -1 on error/overflow. |
+| `syntect_load_theme(ctx, path, name)` | Load a `.tmTheme` file from disk and register it as `name` for use in `syntect_highlight()`. Returns 1 on success, 0 on failure. |
+| `syntect_load_theme_str(ctx, xml, name)` | Parse a `.tmTheme` XML string in memory and register it as `name`. Returns 1 on success, 0 on failure. |
+
+### Syntax discovery
+
+| Function | Description |
+|---|---|
+| `syntect_list_extensions(ctx, buf, len)` | Write a newline-separated, sorted, deduplicated list of all supported file extensions into `buf`. Returns bytes written or -1 on error/overflow. |
+
+### Buffer-based functions
+
+`syntect_list_themes` and `syntect_list_extensions` write into a caller-supplied buffer.
+Pass a buffer large enough for the output plus a null terminator. If the buffer is too
+small, the function returns -1 and leaves the buffer unchanged. A good starting size is
+4096 bytes; allocate more if you get -1.
+
+```c
+char buf[4096];
+int64_t n = syntect_list_themes(ctx, buf, sizeof(buf));
+if (n >= 0) puts(buf);
+```
+
+### Embedded themes
+* `base16-eighties.dark`
+* `base16-mocha.dark`
+* `base16-ocean.dark`
+* `base16-ocean.light`
+* `GitHub`
+* `Heroku`
+* `InspiredGitHub`
+* `Lowlight`
+* `minimal Theme`
+* `Monokai`
+* `Monokai Dark`
+* `Monokai Mod`
+* `Resesif`
+* `Solarized (dark)`
+* `Solarized (light)`
+* `Tomorrow`
+* `Tomorrow Night`
+* `Tomorrow-Night-Eighties`

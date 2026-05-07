@@ -4,6 +4,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* On Windows, define SYNTECT_C_SHARED when consuming the DLL.
+ * FindSyntectC.cmake sets this automatically for shared builds.
+ * Static builds and non-Windows platforms need nothing. */
+#if defined(SYNTECT_C_SHARED) && defined(_WIN32)
+#  define SYNTECT_API __declspec(dllimport)
+#else
+#  define SYNTECT_API
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,14 +24,14 @@ typedef struct SyntectCtx SyntectCtx;
  *
  * The caller owns the returned pointer and must destroy it with syntect_free() when done.
  */
-SyntectCtx * syntect_new(void);
+SYNTECT_API SyntectCtx * syntect_new(void);
 
 /**
  * Destroys a context created by syntect_new() and frees all associated memory.
  *
  * Safe to call with a null pointer.
  */
-void syntect_free(SyntectCtx * ctx);
+SYNTECT_API void syntect_free(SyntectCtx * ctx);
 
 /**
  * Allocator callback for syntect_highlight().
@@ -56,13 +65,13 @@ typedef void *(*syntect_alloc_fn)(size_t size, void *userdata);
  * @return           Pointer returned by alloc filled with the ANSI string, or NULL on
  *                   error (null argument, alloc returned NULL, unknown theme, invalid UTF-8).
  */
-char * syntect_highlight(const SyntectCtx * ctx,
-                         const char * code,
-                         size_t code_len,
-                         const char * extension,
-                         const char * theme_name,
-                         syntect_alloc_fn alloc,
-                         void * userdata);
+SYNTECT_API char * syntect_highlight(const SyntectCtx * ctx,
+                                     const char * code,
+                                     size_t code_len,
+                                     const char * extension,
+                                     const char * theme_name,
+                                     syntect_alloc_fn alloc,
+                                     void * userdata);
 
 /**
  * Callback invoked once per item during syntect_list_themes() / syntect_list_extensions().
@@ -81,9 +90,9 @@ typedef void (*syntect_item_callback)(const char * item, void * userdata);
  * @param userdata Forwarded to cb unchanged; may be NULL.
  * @return         1 on success, 0 if ctx or cb is null.
  */
-int syntect_list_themes(const SyntectCtx * ctx,
-                        syntect_item_callback cb,
-                        void * userdata);
+SYNTECT_API int syntect_list_themes(const SyntectCtx * ctx,
+                                    syntect_item_callback cb,
+                                    void * userdata);
 
 /**
  * Loads a .tmTheme file from disk and registers it under theme_name.
@@ -96,9 +105,9 @@ int syntect_list_themes(const SyntectCtx * ctx,
  * @param theme_name Name to register the theme under for use in syntect_highlight().
  * @return           1 on success, 0 on failure (null argument, file not found, invalid format, etc.)
  */
-int syntect_load_theme(SyntectCtx * ctx,
-                       const char * theme_path,
-                       const char * theme_name);
+SYNTECT_API int syntect_load_theme(SyntectCtx * ctx,
+                                   const char * theme_path,
+                                   const char * theme_name);
 
 /**
  * Parses a .tmTheme XML string and registers it under theme_name.
@@ -111,9 +120,9 @@ int syntect_load_theme(SyntectCtx * ctx,
  * @param theme_name Name to register the theme under for use in syntect_highlight().
  * @return           1 on success, 0 on failure (null argument, invalid XML, bad format, etc.)
  */
-int syntect_load_theme_str(SyntectCtx * ctx,
-                           const char * theme_xml,
-                           const char * theme_name);
+SYNTECT_API int syntect_load_theme_str(SyntectCtx * ctx,
+                                       const char * theme_xml,
+                                       const char * theme_name);
 
 /**
  * Calls cb once for each supported file extension, in sorted, deduplicated order.
@@ -123,9 +132,9 @@ int syntect_load_theme_str(SyntectCtx * ctx,
  * @param userdata Forwarded to cb unchanged; may be NULL.
  * @return         1 on success, 0 if ctx or cb is null.
  */
-int syntect_list_extensions(const SyntectCtx * ctx,
-                            syntect_item_callback cb,
-                            void * userdata);
+SYNTECT_API int syntect_list_extensions(const SyntectCtx * ctx,
+                                        syntect_item_callback cb,
+                                        void * userdata);
 
 #ifdef __cplusplus
 }

@@ -5,12 +5,16 @@ Consumers need no Rust toolchain — just a C compiler and CMake.
 
 ## Supported platforms
 
-| Directory | Target triple |
-|---|---|
-| `lib/linux-x86_64`    | `x86_64-unknown-linux-gnu` |
-| `lib/linux-aarch64`   | `aarch64-unknown-linux-gnu` |
-| `lib/macos-universal` | fat binary (x86_64 + arm64) |
-| `lib/windows-x86_64`  | `x86_64-pc-windows-msvc` |
+| Directory | Target triple | Static | Shared |
+|---|---|---|---|
+| `lib/linux-x86_64`    | `x86_64-unknown-linux-gnu`   | `libsyntect_c.a` | `libsyntect_c.so` |
+| `lib/linux-aarch64`   | `aarch64-unknown-linux-gnu`  | `libsyntect_c.a` | `libsyntect_c.so` |
+| `lib/macos-universal` | fat binary (x86_64 + arm64)  | `libsyntect_c.a` | `libsyntect_c.dylib` |
+| `lib/windows-x86_64`  | `x86_64-pc-windows-msvc`     | `syntect_c.lib`  | `syntect_c.dll` + `syntect_c.dll.lib` |
+
+Debug symbols are split into separate files alongside each shared library
+(`libsyntect_c.so.debug`, `libsyntect_c.dSYM/`, `syntect_c.pdb`).
+Static libraries embed debug info directly.
 
 ## Using in your C project
 

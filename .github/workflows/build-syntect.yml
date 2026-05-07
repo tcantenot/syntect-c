@@ -25,7 +25,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilts-linux
-          path: lib/linux-*/libsyntect_c.a
+          path: |
+            lib/linux-*/libsyntect_c.a
+            lib/linux-*/libsyntect_c.so
+            lib/linux-*/libsyntect_c.so.debug
 
   macos:
     runs-on: macos-latest
@@ -41,7 +44,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilts-macos
-          path: lib/macos-*/libsyntect_c.a
+          path: |
+            lib/macos-*/libsyntect_c.a
+            lib/macos-*/libsyntect_c.dylib
+            lib/macos-*/libsyntect_c.dSYM/**
 
   windows:
     runs-on: windows-latest
@@ -58,7 +64,11 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: prebuilts-windows
-          path: lib/windows-*/syntect_c.lib
+          path: |
+            lib/windows-*/syntect_c.lib
+            lib/windows-*/syntect_c.dll
+            lib/windows-*/syntect_c.dll.lib
+            lib/windows-*/syntect_c.pdb
 
   commit:
     needs: [linux, macos, windows]

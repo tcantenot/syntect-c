@@ -39,15 +39,16 @@ pub extern "C" fn syntect_free(ctx: *mut SyntectCtx) {
 /// The syntax is selected by matching `extension` (e.g. `"c"`, `"rs"`, `"py"`).
 /// If no syntax matches the extension, plain-text is used as a fallback.
 ///
-/// `alloc(size, userdata)` is called exactly once with the required byte count
-/// (including the null terminator). The returned pointer is owned by the caller;
-/// free it with whatever allocator backs `alloc`.
+/// `code` must be valid UTF-8 and does not need to be null-terminated — only the
+/// first `code_len` bytes are read. `alloc(size, userdata)` is called exactly once
+/// with the required byte count (including the null terminator). The returned pointer
+/// is owned by the caller; free it with whatever allocator backs `alloc`.
 ///
 /// Returns null on any error: null pointer argument, `alloc` is null or returns null,
 /// unknown `theme_name`, or invalid UTF-8.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntect_highlight(
-    ctx: *const SyntectCtx, code: *const c_char,
+    ctx: *const SyntectCtx, code: *const c_char, code_len: usize,
     extension: *const c_char, theme_name: *const c_char,
     alloc: Option<AllocFn>, userdata: *mut c_void,
 ) -> *mut c_char {
@@ -56,7 +57,7 @@ pub unsafe extern "C" fn syntect_highlight(
         return std::ptr::null_mut();
     }
     let ctx   = unsafe { &*ctx };
-    let code  = match unsafe { CStr::from_ptr(code) }.to_str() { Ok(s) => s, Err(_) => return std::ptr::null_mut() };
+    let code  = match std::str::from_utf8(unsafe { std::slice::from_raw_parts(code as *const u8, code_len) }) { Ok(s) => s, Err(_) => return std::ptr::null_mut() };
     let ext   = match unsafe { CStr::from_ptr(extension) }.to_str() { Ok(s) => s, Err(_) => return std::ptr::null_mut() };
     let tname = match unsafe { CStr::from_ptr(theme_name) }.to_str() { Ok(s) => s, Err(_) => return std::ptr::null_mut() };
     let syntax = ctx.ss.find_syntax_by_extension(ext)

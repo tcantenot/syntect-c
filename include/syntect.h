@@ -46,9 +46,11 @@ typedef void *(*syntect_alloc_fn)(size_t size, void *userdata);
  * allocator backs alloc.
  *
  * @param ctx        Highlighter context created by syntect_new().
- * @param code       Null-terminated source code string to highlight.
- * @param extension  File extension used to detect the syntax (without leading dot).
- * @param theme_name Name of the theme to apply (see syntect_list_themes()).
+ * @param code       Source code to highlight. Must be valid UTF-8. Does not need to be
+ *                   null-terminated — only the first code_len bytes are read.
+ * @param code_len   Length of code in bytes (not characters).
+ * @param extension  Null-terminated file extension used to detect the syntax (without leading dot).
+ * @param theme_name Null-terminated name of the theme to apply (see syntect_list_themes()).
  * @param alloc      Allocator callback; must not be NULL.
  * @param userdata   Forwarded to alloc unchanged; may be NULL.
  * @return           Pointer returned by alloc filled with the ANSI string, or NULL on
@@ -56,6 +58,7 @@ typedef void *(*syntect_alloc_fn)(size_t size, void *userdata);
  */
 char * syntect_highlight(const SyntectCtx * ctx,
                          const char * code,
+                         size_t code_len,
                          const char * extension,
                          const char * theme_name,
                          syntect_alloc_fn alloc,

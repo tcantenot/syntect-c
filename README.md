@@ -27,14 +27,16 @@ target_link_libraries(my_target PRIVATE SyntectC::SyntectC)
 
 ```c
 #include <stdlib.h>
+#include <string.h>
 #include "syntect.h"
 
-static void *my_alloc(size_t size, void *userdata) { (void)userdata; return malloc(size); }
+static void * my_alloc(size_t size, void *userdata) { (void)userdata; return malloc(size); }
+static void my_free(void * ptr) { free(ptr); }
 
 SyntectCtx *ctx = syntect_new();
-char *hl = syntect_highlight(ctx, code, "c", "Monokai Mod", my_alloc, NULL);
+char *hl = syntect_highlight(ctx, code, strlen(code), "c", "Monokai Mod", my_alloc, NULL);
 fputs(hl, stdout);
-free(hl);
+my_free(hl);
 syntect_free(ctx);
 ```
 
@@ -65,7 +67,7 @@ Actions → "Build syntect-c prebuilts" → "Run workflow".
 
 | Function | Description |
 |---|---|
-| `syntect_highlight(ctx, code, ext, theme, alloc, userdata)` | Highlight `code` using the syntax for `ext` and the named `theme`. `alloc(size, userdata)` is called exactly once to obtain the output buffer. Returns the pointer from `alloc`, or NULL on error (null argument, `alloc` returned NULL, unknown theme, invalid UTF-8). Falls back to plain text if the extension is not recognised. Caller frees the result with their own allocator. |
+| `syntect_highlight(ctx, code, code_len, ext, theme, alloc, userdata)` | Highlight `code` (UTF-8, `code_len` bytes, null terminator not required) using the syntax for `ext` and the named `theme`. `alloc(size, userdata)` is called exactly once to obtain the output buffer. Returns the pointer from `alloc`, or NULL on error (null argument, `alloc` returned NULL, unknown theme, invalid UTF-8). Falls back to plain text if the extension is not recognised. Caller frees the result with their own allocator. |
 
 ### Themes
 
@@ -80,6 +82,35 @@ Actions → "Build syntect-c prebuilts" → "Run workflow".
 | Function | Description |
 |---|---|
 | `syntect_list_extensions(ctx, cb, userdata)` | Call `cb` once per supported file extension, in sorted, deduplicated order. Returns 1 on success, 0 if `ctx` or `cb` is NULL. |
+
+### Allocator callback
+
+`syntect_highlight` calls your allocator exactly once with the required buffer size
+(including the null terminator), then writes the ANSI string into that buffer and returns it.
+You free the pointer with whatever allocator backs `alloc` — no library function needed.
+
+```c
+typedef void *(*syntect_alloc_fn)(size_t size, void * userdata);
+```
+
+```c
+// malloc-backed — free with free()
+static void * heap_alloc(size_t size, void * userdata) {
+    (void)userdata;
+    return malloc(size);
+}
+char * hl = syntect_highlight(ctx, code, strlen(code), "c", "Monokai Mod", heap_alloc, NULL);
+fputs(hl, stdout);
+free(hl);
+
+// Arena-backed — no individual free needed
+static void * arena_alloc(size_t size, void * userdata) {
+    return arena_push((Arena *)userdata, size);
+}
+char * hl2 = syntect_highlight(ctx, code, code_len, "rs", "InspiredGitHub", arena_alloc, &my_arena);
+fputs(hl2, stdout);
+// hl2 lives until the arena is reset/freed
+```
 
 ### Callback-based iteration
 
@@ -106,35 +137,6 @@ static void collect(const char *item, void *userdata) {
 }
 MyArray themes = {0};
 syntect_list_themes(ctx, collect, &themes);
-```
-
-### Allocator callback
-
-`syntect_highlight` calls your allocator exactly once with the required buffer size
-(including the null terminator), then writes the ANSI string into that buffer and returns it.
-You free the pointer with whatever allocator backs `alloc` — no library function needed.
-
-```c
-typedef void *(*syntect_alloc_fn)(size_t size, void * userdata);
-```
-
-```c
-// malloc-backed — free with free()
-static void * heap_alloc(size_t size, void * userdata) {
-    (void)userdata;
-    return malloc(size);
-}
-char * hl = syntect_highlight(ctx, code, "c", "Monokai Mod", heap_alloc, NULL);
-fputs(hl, stdout);
-free(hl);
-
-// Arena-backed — no individual free needed
-static void * arena_alloc(size_t size, void * userdata) {
-    return arena_push((Arena *)userdata, size);
-}
-char * hl2 = syntect_highlight(ctx, code, "rs", "InspiredGitHub", arena_alloc, &my_arena);
-fputs(hl2, stdout);
-// hl2 lives until the arena is reset/freed
 ```
 
 ### Embedded themes

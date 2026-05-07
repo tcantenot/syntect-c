@@ -167,3 +167,8 @@ syntect_list_themes(ctx, collect, &themes);
 * `Tomorrow`
 * `Tomorrow Night`
 * `Tomorrow-Night-Eighties`
+
+## License
+
+`syntect-c` is licensed under the MIT License.
+<br/>See `License.txt` and `licenses` folder.

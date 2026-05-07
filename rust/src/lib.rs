@@ -1,5 +1,7 @@
 use std::ffi::{CStr, CString};
 use std::os::raw::{c_char, c_int, c_void};
+
+type AllocFn = unsafe extern "C" fn(size: usize, userdata: *mut c_void) -> *mut c_void;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, ThemeSet};
 use syntect::parsing::SyntaxSet;
@@ -32,19 +34,24 @@ pub extern "C" fn syntect_free(ctx: *mut SyntectCtx) {
     if !ctx.is_null() { unsafe { drop(Box::from_raw(ctx)) }; }
 }
 
-/// Highlights `code` and returns a heap-allocated, null-terminated ANSI 24-bit color string.
+/// Highlights `code` and writes the result into a buffer allocated by `alloc`.
 ///
 /// The syntax is selected by matching `extension` (e.g. `"c"`, `"rs"`, `"py"`).
 /// If no syntax matches the extension, plain-text is used as a fallback.
 ///
-/// The returned string must be freed with [`syntect_free_string`].
+/// `alloc(size, userdata)` is called exactly once with the required byte count
+/// (including the null terminator). The returned pointer is owned by the caller;
+/// free it with whatever allocator backs `alloc`.
 ///
-/// Returns null on any error: null pointer argument, unknown `theme_name`, or invalid UTF-8.
+/// Returns null on any error: null pointer argument, `alloc` is null or returns null,
+/// unknown `theme_name`, or invalid UTF-8.
 #[unsafe(no_mangle)]
-pub extern "C" fn syntect_highlight(
+pub unsafe extern "C" fn syntect_highlight(
     ctx: *const SyntectCtx, code: *const c_char,
     extension: *const c_char, theme_name: *const c_char,
+    alloc: Option<AllocFn>, userdata: *mut c_void,
 ) -> *mut c_char {
+    let alloc = match alloc { Some(f) => f, None => return std::ptr::null_mut() };
     if ctx.is_null() || code.is_null() || extension.is_null() || theme_name.is_null() {
         return std::ptr::null_mut();
     }
@@ -64,15 +71,14 @@ pub extern "C" fn syntect_highlight(
         out.push_str(&as_24_bit_terminal_escaped(&ranges, false));
     }
     out.push_str("\x1b[0m");
-    match CString::new(out) { Ok(s) => s.into_raw(), Err(_) => std::ptr::null_mut() }
-}
-
-/// Frees a string returned by [`syntect_highlight`].
-///
-/// Safe to call with a null pointer.
-#[unsafe(no_mangle)]
-pub extern "C" fn syntect_free_string(s: *mut c_char) {
-    if !s.is_null() { unsafe { drop(CString::from_raw(s)) }; }
+    let bytes = out.as_bytes();
+    let buf = unsafe { alloc(bytes.len() + 1, userdata) } as *mut c_char;
+    if buf.is_null() { return std::ptr::null_mut(); }
+    unsafe {
+        std::ptr::copy_nonoverlapping(bytes.as_ptr(), buf as *mut u8, bytes.len());
+        *buf.add(bytes.len()) = 0;
+    }
+    buf
 }
 
 type ItemCallback = unsafe extern "C" fn(*const c_char, *mut c_void);

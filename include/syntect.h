@@ -25,29 +25,41 @@ SyntectCtx * syntect_new(void);
 void syntect_free(SyntectCtx * ctx);
 
 /**
- * Highlights code and returns a heap-allocated, null-terminated ANSI 24-bit color string.
+ * Allocator callback for syntect_highlight().
+ *
+ * Called exactly once with the number of bytes needed (including the null terminator).
+ * Return a writable buffer of at least that size, or NULL to signal allocation failure.
+ *
+ * @param size     Number of bytes required (includes null terminator).
+ * @param userdata Opaque pointer forwarded unchanged from syntect_highlight().
+ */
+typedef void *(*syntect_alloc_fn)(size_t size, void *userdata);
+
+/**
+ * Highlights code and writes the result into a caller-allocated buffer.
  *
  * The syntax is selected by matching extension (e.g. "c", "rs", "py"). If no syntax
  * matches the extension, plain-text is used as a fallback.
+ *
+ * alloc is called exactly once with the required byte count (including the null
+ * terminator). The returned pointer is owned by the caller; free it with whatever
+ * allocator backs alloc.
  *
  * @param ctx        Highlighter context created by syntect_new().
  * @param code       Null-terminated source code string to highlight.
  * @param extension  File extension used to detect the syntax (without leading dot).
  * @param theme_name Name of the theme to apply (see syntect_list_themes()).
- * @return           Heap-allocated ANSI string, or NULL on error (null argument,
- *                   unknown theme, invalid UTF-8). Must be freed with syntect_free_string().
+ * @param alloc      Allocator callback; must not be NULL.
+ * @param userdata   Forwarded to alloc unchanged; may be NULL.
+ * @return           Pointer returned by alloc filled with the ANSI string, or NULL on
+ *                   error (null argument, alloc returned NULL, unknown theme, invalid UTF-8).
  */
 char * syntect_highlight(const SyntectCtx * ctx,
-                        const char * code,
-                        const char * extension,
-                        const char * theme_name);
-
-/**
- * Frees a string returned by syntect_highlight().
- *
- * Safe to call with a null pointer.
- */
-void syntect_free_string(char * s);
+                         const char * code,
+                         const char * extension,
+                         const char * theme_name,
+                         syntect_alloc_fn alloc,
+                         void * userdata);
 
 /**
  * Callback invoked once per item during syntect_list_themes() / syntect_list_extensions().

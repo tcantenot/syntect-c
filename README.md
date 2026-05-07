@@ -26,11 +26,15 @@ target_link_libraries(my_target PRIVATE SyntectC::SyntectC)
 ```
 
 ```c
+#include <stdlib.h>
 #include "syntect.h"
+
+static void *my_alloc(size_t size, void *userdata) { (void)userdata; return malloc(size); }
+
 SyntectCtx *ctx = syntect_new();
-char *hl = syntect_highlight(ctx, code, "c", "Monokai Mod");
+char *hl = syntect_highlight(ctx, code, "c", "Monokai Mod", my_alloc, NULL);
 fputs(hl, stdout);
-syntect_free_string(hl);
+free(hl);
 syntect_free(ctx);
 ```
 
@@ -61,8 +65,7 @@ Actions → "Build syntect-c prebuilts" → "Run workflow".
 
 | Function | Description |
 |---|---|
-| `syntect_highlight(ctx, code, ext, theme)` | Highlight `code` using the syntax for `ext` and the named `theme`. Returns a heap-allocated ANSI 24-bit color string, or NULL on error. Falls back to plain text if the extension is not recognised. Must be freed with `syntect_free_string()`. |
-| `syntect_free_string(s)` | Free a string returned by `syntect_highlight()`. Safe to call with NULL. |
+| `syntect_highlight(ctx, code, ext, theme, alloc, userdata)` | Highlight `code` using the syntax for `ext` and the named `theme`. `alloc(size, userdata)` is called exactly once to obtain the output buffer. Returns the pointer from `alloc`, or NULL on error (null argument, `alloc` returned NULL, unknown theme, invalid UTF-8). Falls back to plain text if the extension is not recognised. Caller frees the result with their own allocator. |
 
 ### Themes
 
@@ -85,12 +88,12 @@ caller-supplied callback. The `item` pointer is only valid for the duration of t
 copy it if you need to store it.
 
 ```c
-typedef void (*syntect_item_callback)(const char *item, void *userdata);
+typedef void (*syntect_item_callback)(const char * item, void * userdata);
 ```
 
 ```c
 // Simple: print each item
-static void print_item(const char *item, void *userdata) {
+static void print_item(const char * item, void * userdata) {
     (void)userdata;
     puts(item);
 }
@@ -98,11 +101,40 @@ syntect_list_themes(ctx, print_item, NULL);
 
 // Collect into a dynamic array
 static void collect(const char *item, void *userdata) {
-    MyArray *arr = userdata;
+    MyArray * arr = userdata;
     array_push(arr, strdup(item));
 }
 MyArray themes = {0};
 syntect_list_themes(ctx, collect, &themes);
+```
+
+### Allocator callback
+
+`syntect_highlight` calls your allocator exactly once with the required buffer size
+(including the null terminator), then writes the ANSI string into that buffer and returns it.
+You free the pointer with whatever allocator backs `alloc` — no library function needed.
+
+```c
+typedef void *(*syntect_alloc_fn)(size_t size, void * userdata);
+```
+
+```c
+// malloc-backed — free with free()
+static void * heap_alloc(size_t size, void * userdata) {
+    (void)userdata;
+    return malloc(size);
+}
+char * hl = syntect_highlight(ctx, code, "c", "Monokai Mod", heap_alloc, NULL);
+fputs(hl, stdout);
+free(hl);
+
+// Arena-backed — no individual free needed
+static void * arena_alloc(size_t size, void * userdata) {
+    return arena_push((Arena *)userdata, size);
+}
+char * hl2 = syntect_highlight(ctx, code, "rs", "InspiredGitHub", arena_alloc, &my_arena);
+fputs(hl2, stdout);
+// hl2 lives until the arena is reset/freed
 ```
 
 ### Embedded themes

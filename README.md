@@ -25,15 +25,33 @@ git submodule add <url> third_party/syntect-c
 git submodule update --init
 ```
 
+**Static (default)** — the library is linked into your executable; no extra file to distribute:
+
 ```cmake
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/syntect-c/cmake")
 find_package(SyntectC REQUIRED)
 target_link_libraries(my_target PRIVATE SyntectC::SyntectC)
 ```
 
+**Shared** — link against the DLL/so/dylib at runtime:
+
+```cmake
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/syntect-c/cmake")
+set(SYNTECT_C_SHARED TRUE)
+find_package(SyntectC REQUIRED)
+target_link_libraries(my_target PRIVATE SyntectC::SyntectC)
+```
+
+> **Windows note**: when using the shared library, `syntect_c.dll` must be placed
+> next to your executable (or in a directory on `PATH`) at runtime. CMake does not
+> copy it automatically — add an `install(FILES ...)` rule or copy it manually.
+
 ### Manual setup
 
-Copy in your project the library header (`include/syntect.h`) and the appropriate precompiled binary (`lib/<platform>`) and link against it.
+Copy `include/syntect.h` and the appropriate precompiled binary from `lib/<platform>/`
+into your project and link against it. For the shared library on Windows, also add
+`syntect_c.dll.lib` as the link-time import library and ship `syntect_c.dll` with
+your executable.
 
 
 ### Code example
@@ -62,6 +80,10 @@ bash scripts/build-syntect.sh
 # Windows (Developer PowerShell)
 .\scripts\build-syntect.ps1
 ```
+
+Each script produces both the static library and the shared library for all
+supported targets on that OS. Shared libraries have their debug info split
+into separate files (`.so.debug`, `.dSYM/`, `.pdb`).
 
 Or use the GitHub Actions workflow — push to the repo and it builds and
 commits all platforms automatically. Trigger the first build manually via

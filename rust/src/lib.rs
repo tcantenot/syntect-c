@@ -15,11 +15,22 @@ pub extern "C" fn syntect_new() -> *mut SyntectCtx {
     }))
 }
 
+/// Destroys a context created by [`syntect_new`] and frees all associated memory.
+///
+/// Safe to call with a null pointer.
 #[unsafe(no_mangle)]
 pub extern "C" fn syntect_free(ctx: *mut SyntectCtx) {
     if !ctx.is_null() { unsafe { drop(Box::from_raw(ctx)) }; }
 }
 
+/// Highlights `code` and returns a heap-allocated, null-terminated ANSI 24-bit color string.
+///
+/// The syntax is selected by matching `extension` (e.g. `"c"`, `"rs"`, `"py"`).
+/// If no syntax matches the extension, plain-text is used as a fallback.
+///
+/// The returned string must be freed with [`syntect_free_string`].
+///
+/// Returns null on any error: null pointer argument, unknown `theme_name`, or invalid UTF-8.
 #[unsafe(no_mangle)]
 pub extern "C" fn syntect_highlight(
     ctx: *const SyntectCtx, code: *const c_char,
@@ -47,11 +58,20 @@ pub extern "C" fn syntect_highlight(
     match CString::new(out) { Ok(s) => s.into_raw(), Err(_) => std::ptr::null_mut() }
 }
 
+/// Frees a string returned by [`syntect_highlight`].
+///
+/// Safe to call with a null pointer.
 #[unsafe(no_mangle)]
 pub extern "C" fn syntect_free_string(s: *mut c_char) {
     if !s.is_null() { unsafe { drop(CString::from_raw(s)) }; }
 }
 
+/// Writes a newline-separated, sorted list of available theme names into `buf`.
+///
+/// `buf_len` must include space for the null terminator.
+///
+/// Returns the number of bytes written (excluding the null terminator) on success,
+/// or -1 if `ctx` or `buf` is null, or if the buffer is too small.
 #[unsafe(no_mangle)]
 pub extern "C" fn syntect_list_themes(ctx: *const SyntectCtx, buf: *mut c_char, buf_len: usize) -> i64 {
     if ctx.is_null() || buf.is_null() { return -1; }
@@ -61,6 +81,14 @@ pub extern "C" fn syntect_list_themes(ctx: *const SyntectCtx, buf: *mut c_char, 
     write_buf(names.join("\n").as_bytes(), buf, buf_len)
 }
 
+
+/// Writes a newline-separated, sorted, deduplicated list of all supported file extensions
+/// into `buf`.
+///
+/// `buf_len` must include space for the null terminator.
+///
+/// Returns the number of bytes written (excluding the null terminator) on success,
+/// or -1 if `ctx` or `buf` is null, or if the buffer is too small.
 #[unsafe(no_mangle)]
 pub extern "C" fn syntect_list_extensions(ctx: *const SyntectCtx, buf: *mut c_char, buf_len: usize) -> i64 {
     if ctx.is_null() || buf.is_null() { return -1; }

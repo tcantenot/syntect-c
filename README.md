@@ -14,6 +14,8 @@ Consumers need no Rust toolchain — just a C compiler and CMake.
 
 ## Using in your C project
 
+### Using git submodule and CMake
+
 ```bash
 git submodule add <url> third_party/syntect-c
 git submodule update --init
@@ -24,6 +26,13 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/third_party/syntect-c/cmake")
 find_package(SyntectC REQUIRED)
 target_link_libraries(my_target PRIVATE SyntectC::SyntectC)
 ```
+
+### Manual setup
+
+Copy in your project the library header (`include/syntect.h`) and the appropriate precompiled binary (`lib/<platform>`) and link against it.
+
+
+### Code example
 
 ```c
 #include <stdlib.h>

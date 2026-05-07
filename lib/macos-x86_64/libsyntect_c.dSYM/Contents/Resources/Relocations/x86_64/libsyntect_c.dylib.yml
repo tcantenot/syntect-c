@@ -1,0 +1,5 @@
+---
+triple:          'x86_64-apple-darwin'
+binary-path:     'lib/macos-x86_64/libsyntect_c.dylib'
+relocations:     []
+...

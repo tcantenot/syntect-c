@@ -9,18 +9,18 @@ crate-type = ["staticlib"]
 
 [dependencies]
 syntect = { version = "5.3.0", default-features = false, features = [
-    "default-syntaxes",
-    "default-themes",
-    "regex-onig",
+    "default-syntaxes", # Enables inclusion of the default syntax packages.
+    "default-themes",   # Enables inclusion of the default theme packages.
+    "regex-onig",       # Use the Oniguruma regex engine
 ] }
 
 # Favor minimal binary size
 # https://doc.rust-lang.org/cargo/reference/profiles.html
 [profile.release]
 opt-level       = "s"       # Optimize for binary size
-lto             = true
-codegen-units   = 1
+lto             = true      # Enable Link Time Optimization
+codegen-units   = 1         # Compile the entire crate as a single LLVM unit
 debug           = true      # Embed DWARF/PDB
-strip           = "none"
+strip           = "none"    # Do not strip debug info
 split-debuginfo = "off"     # Keep debug info inside the .a/.lib
 panic           = "abort"   # Removes unwind machinery

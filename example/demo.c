@@ -3,6 +3,7 @@
 #include "syntect.h"
 
 static void section(const char *t) { printf("\n\033[1;36m=== %s ===\033[0m\n", t); }
+static void print_item(const char *item, void *userdata) { (void)userdata; puts(item); }
 
 static const char *C_CODE =
     "#include <stdio.h>\n"
@@ -31,8 +32,7 @@ int main(void) {
     if (!ctx) { fputs("syntect_new() failed\n", stderr); return 1; }
 
     section("Available themes");
-    char buf[4096];
-    if (syntect_list_themes(ctx, buf, sizeof buf) >= 0) puts(buf);
+    syntect_list_themes(ctx, print_item, NULL);
 
     section("C — base16-ocean.dark");
     char *hl = syntect_highlight(ctx, C_CODE, "c", "base16-ocean.dark");

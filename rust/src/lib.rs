@@ -1,5 +1,5 @@
 use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
+use std::os::raw::{c_char, c_int, c_void};
 use syntect::easy::HighlightLines;
 use syntect::highlighting::{Style, ThemeSet};
 use syntect::parsing::SyntaxSet;
@@ -75,19 +75,27 @@ pub extern "C" fn syntect_free_string(s: *mut c_char) {
     if !s.is_null() { unsafe { drop(CString::from_raw(s)) }; }
 }
 
-/// Writes a newline-separated, sorted list of available theme names into `buf`.
+type ItemCallback = unsafe extern "C" fn(*const c_char, *mut c_void);
+
+/// Calls `cb` once for each available theme name, in case-insensitive sorted order.
 ///
-/// `buf_len` must include space for the null terminator.
-///
-/// Returns the number of bytes written (excluding the null terminator) on success,
-/// or -1 if `ctx` or `buf` is null, or if the buffer is too small.
+/// Returns 1 on success, 0 if `ctx` or `cb` is null.
 #[unsafe(no_mangle)]
-pub extern "C" fn syntect_list_themes(ctx: *const SyntectCtx, buf: *mut c_char, buf_len: usize) -> i64 {
-    if ctx.is_null() || buf.is_null() { return -1; }
+pub extern "C" fn syntect_list_themes(
+    ctx: *const SyntectCtx,
+    cb: Option<ItemCallback>,
+    userdata: *mut c_void,
+) -> c_int {
+    let Some(cb) = cb else { return 0 };
+    if ctx.is_null() { return 0; }
     let ctx = unsafe { &*ctx };
     let mut names: Vec<&str> = ctx.ts.themes.keys().map(|s| s.as_str()).collect();
     names.sort_unstable_by_key(|s| s.to_ascii_lowercase());
-    write_buf(names.join("\n").as_bytes(), buf, buf_len)
+    for name in names {
+        let s = CString::new(name).unwrap();
+        unsafe { cb(s.as_ptr(), userdata) };
+    }
+    1
 }
 
 /// Loads a `.tmTheme` file from disk and registers it under `theme_name`.
@@ -156,28 +164,24 @@ pub extern "C" fn syntect_load_theme_str(
     }
 }
 
-/// Writes a newline-separated, sorted, deduplicated list of all supported file extensions
-/// into `buf`.
+/// Calls `cb` once for each supported file extension, in sorted, deduplicated order.
 ///
-/// `buf_len` must include space for the null terminator.
-///
-/// Returns the number of bytes written (excluding the null terminator) on success,
-/// or -1 if `ctx` or `buf` is null, or if the buffer is too small.
+/// Returns 1 on success, 0 if `ctx` or `cb` is null.
 #[unsafe(no_mangle)]
-pub extern "C" fn syntect_list_extensions(ctx: *const SyntectCtx, buf: *mut c_char, buf_len: usize) -> i64 {
-    if ctx.is_null() || buf.is_null() { return -1; }
+pub extern "C" fn syntect_list_extensions(
+    ctx: *const SyntectCtx,
+    cb: Option<ItemCallback>,
+    userdata: *mut c_void,
+) -> c_int {
+    let Some(cb) = cb else { return 0 };
+    if ctx.is_null() { return 0; }
     let ctx = unsafe { &*ctx };
     let mut exts: Vec<&str> = ctx.ss.syntaxes().iter()
         .flat_map(|s| s.file_extensions.iter().map(|e| e.as_str())).collect();
     exts.sort_unstable(); exts.dedup();
-    write_buf(exts.join("\n").as_bytes(), buf, buf_len)
-}
-
-fn write_buf(bytes: &[u8], buf: *mut c_char, buf_len: usize) -> i64 {
-    if bytes.len() + 1 > buf_len { return -1; }
-    unsafe {
-        std::ptr::copy_nonoverlapping(bytes.as_ptr(), buf as *mut u8, bytes.len());
-        *buf.add(bytes.len()) = 0;
+    for ext in exts {
+        let s = CString::new(ext).unwrap();
+        unsafe { cb(s.as_ptr(), userdata) };
     }
-    bytes.len() as i64
+    1
 }

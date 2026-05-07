@@ -28,7 +28,7 @@ target_link_libraries(my_target PRIVATE SyntectC::SyntectC)
 ```c
 #include "syntect.h"
 SyntectCtx *ctx = syntect_new();
-char *hl = syntect_highlight(ctx, code, "c", "base16-ocean.dark");
+char *hl = syntect_highlight(ctx, code, "c", "Monokai Mod");
 fputs(hl, stdout);
 syntect_free_string(hl);
 syntect_free(ctx);
@@ -68,7 +68,7 @@ Actions → "Build syntect-c prebuilts" → "Run workflow".
 
 | Function | Description |
 |---|---|
-| `syntect_list_themes(ctx, buf, len)` | Write a newline-separated, sorted list of available theme names into `buf`. Returns bytes written or -1 on error/overflow. |
+| `syntect_list_themes(ctx, cb, userdata)` | Call `cb` once per available theme name, in case-insensitive sorted order. Returns 1 on success, 0 if `ctx` or `cb` is NULL. |
 | `syntect_load_theme(ctx, path, name)` | Load a `.tmTheme` file from disk and register it as `name` for use in `syntect_highlight()`. Returns 1 on success, 0 on failure. |
 | `syntect_load_theme_str(ctx, xml, name)` | Parse a `.tmTheme` XML string in memory and register it as `name`. Returns 1 on success, 0 on failure. |
 
@@ -76,19 +76,33 @@ Actions → "Build syntect-c prebuilts" → "Run workflow".
 
 | Function | Description |
 |---|---|
-| `syntect_list_extensions(ctx, buf, len)` | Write a newline-separated, sorted, deduplicated list of all supported file extensions into `buf`. Returns bytes written or -1 on error/overflow. |
+| `syntect_list_extensions(ctx, cb, userdata)` | Call `cb` once per supported file extension, in sorted, deduplicated order. Returns 1 on success, 0 if `ctx` or `cb` is NULL. |
 
-### Buffer-based functions
+### Callback-based iteration
 
-`syntect_list_themes` and `syntect_list_extensions` write into a caller-supplied buffer.
-Pass a buffer large enough for the output plus a null terminator. If the buffer is too
-small, the function returns -1 and leaves the buffer unchanged. A good starting size is
-4096 bytes; allocate more if you get -1.
+`syntect_list_themes` and `syntect_list_extensions` deliver items one at a time via a
+caller-supplied callback. The `item` pointer is only valid for the duration of the call —
+copy it if you need to store it.
 
 ```c
-char buf[4096];
-int64_t n = syntect_list_themes(ctx, buf, sizeof(buf));
-if (n >= 0) puts(buf);
+typedef void (*syntect_item_callback)(const char *item, void *userdata);
+```
+
+```c
+// Simple: print each item
+static void print_item(const char *item, void *userdata) {
+    (void)userdata;
+    puts(item);
+}
+syntect_list_themes(ctx, print_item, NULL);
+
+// Collect into a dynamic array
+static void collect(const char *item, void *userdata) {
+    MyArray *arr = userdata;
+    array_push(arr, strdup(item));
+}
+MyArray themes = {0};
+syntect_list_themes(ctx, collect, &themes);
 ```
 
 ### Embedded themes

@@ -8,19 +8,21 @@
 extern "C" {
 #endif
 
-typedef struct SyntectCtx Syn/**
+typedef struct SyntectCtx SyntectCtx;
+
+/**
  * Creates a new highlighter context loaded with the built-in syntax and theme sets.
  *
  * The caller owns the returned pointer and must destroy it with syntect_free() when done.
  */
-SyntectCtx *syntect_new(void);
+SyntectCtx * syntect_new(void);
 
 /**
  * Destroys a context created by syntect_new() and frees all associated memory.
  *
  * Safe to call with a null pointer.
  */
-void syntect_free(SyntectCtx *ctx);
+void syntect_free(SyntectCtx * ctx);
 
 /**
  * Highlights code and returns a heap-allocated, null-terminated ANSI 24-bit color string.
@@ -35,31 +37,38 @@ void syntect_free(SyntectCtx *ctx);
  * @return           Heap-allocated ANSI string, or NULL on error (null argument,
  *                   unknown theme, invalid UTF-8). Must be freed with syntect_free_string().
  */
-char *syntect_highlight(const SyntectCtx *ctx,
-                           const char *code,
-                           const char *extension,
-                           const char *theme_name);
+char * syntect_highlight(const SyntectCtx * ctx,
+                        const char * code,
+                        const char * extension,
+                        const char * theme_name);
 
 /**
  * Frees a string returned by syntect_highlight().
  *
  * Safe to call with a null pointer.
  */
-void syntect_free_string(char *s);
+void syntect_free_string(char * s);
 
 /**
- * Writes a newline-separated, sorted list of available theme names into buf.
+ * Callback invoked once per item during syntect_list_themes() / syntect_list_extensions().
  *
- * buf_len must include space for the null terminator.
- *
- * @param ctx     Highlighter context created by syntect_new().
- * @param buf     Caller-supplied output buffer.
- * @param buf_len Size of buf in bytes (must fit the result plus null terminator).
- * @return        Number of bytes written (excluding null terminator) on success,
- *                or -1 if ctx or buf is null, or if the buffer is too small.
+ * @param item     Null-terminated string (theme name or file extension).
+ *                 Valid only for the duration of the callback — copy if needed.
+ * @param userdata Opaque pointer forwarded unchanged from the list call.
  */
-int64_t syntect_list_themes(const SyntectCtx *ctx,
-                             char *buf, size_t buf_len);
+typedef void (*syntect_item_callback)(const char * item, void * userdata);
+
+/**
+ * Calls cb once for each available theme name, in case-insensitive sorted order.
+ *
+ * @param ctx      Highlighter context created by syntect_new().
+ * @param cb       Callback invoked once per theme name.
+ * @param userdata Forwarded to cb unchanged; may be NULL.
+ * @return         1 on success, 0 if ctx or cb is null.
+ */
+int syntect_list_themes(const SyntectCtx * ctx,
+                        syntect_item_callback cb,
+                        void * userdata);
 
 /**
  * Loads a .tmTheme file from disk and registers it under theme_name.
@@ -72,9 +81,9 @@ int64_t syntect_list_themes(const SyntectCtx *ctx,
  * @param theme_name Name to register the theme under for use in syntect_highlight().
  * @return           1 on success, 0 on failure (null argument, file not found, invalid format, etc.)
  */
-int syntect_load_theme(SyntectCtx *ctx,
-                       const char *theme_path,
-                       const char *theme_name);
+int syntect_load_theme(SyntectCtx * ctx,
+                       const char * theme_path,
+                       const char * theme_name);
 
 /**
  * Parses a .tmTheme XML string and registers it under theme_name.
@@ -87,23 +96,21 @@ int syntect_load_theme(SyntectCtx *ctx,
  * @param theme_name Name to register the theme under for use in syntect_highlight().
  * @return           1 on success, 0 on failure (null argument, invalid XML, bad format, etc.)
  */
-int syntect_load_theme_str(SyntectCtx  *ctx,
-                            const char *theme_xml,
-                            const char *theme_name);
+int syntect_load_theme_str(SyntectCtx * ctx,
+                           const char * theme_xml,
+                           const char * theme_name);
 
 /**
- * Writes a newline-separated, sorted, deduplicated list of all supported file extensions
- * into buf.
+ * Calls cb once for each supported file extension, in sorted, deduplicated order.
  *
- * buf_len must include space for the null terminator.
- *
- * @param ctx     Highlighter context created by syntect_new().
- * @param buf     Caller-supplied output buffer.
- * @param buf_len Size of buf in bytes (must fit the result plus null terminator).
- * @return        Number of bytes written (excluding null terminator) on success,
- *                or -1 if ctx or buf is null, or if the buffer is too small.
+ * @param ctx      Highlighter context created by syntect_new().
+ * @param cb       Callback invoked once per extension.
+ * @param userdata Forwarded to cb unchanged; may be NULL.
+ * @return         1 on success, 0 if ctx or cb is null.
  */
-int64_t syntect_list_extensions(const SyntectCtx *ctx, char *buf, size_t buf_len);
+int syntect_list_extensions(const SyntectCtx * ctx,
+                            syntect_item_callback cb,
+                            void * userdata);
 
 #ifdef __cplusplus
 }

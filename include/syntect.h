@@ -62,6 +62,36 @@ int64_t syntect_list_themes(const SyntectCtx *ctx,
                              char *buf, size_t buf_len);
 
 /**
+ * Loads a .tmTheme file from disk and registers it under theme_name.
+ *
+ * theme_path may be an absolute or relative path to the .tmTheme file.
+ * After a successful call, theme_name can be passed to syntect_highlight().
+ *
+ * @param ctx        Highlighter context created by syntect_new().
+ * @param theme_path Path to the .tmTheme file.
+ * @param theme_name Name to register the theme under for use in syntect_highlight().
+ * @return           1 on success, 0 on failure (null argument, file not found, invalid format, etc.)
+ */
+int syntect_load_theme(SyntectCtx *ctx,
+                       const char *theme_path,
+                       const char *theme_name);
+
+/**
+ * Parses a .tmTheme XML string and registers it under theme_name.
+ *
+ * The theme is parsed entirely in memory — no file I/O is performed.
+ * After a successful call, theme_name can be passed to syntect_highlight().
+ *
+ * @param ctx        Highlighter context created by syntect_new().
+ * @param theme_xml  Null-terminated string containing the full .tmTheme XML content.
+ * @param theme_name Name to register the theme under for use in syntect_highlight().
+ * @return           1 on success, 0 on failure (null argument, invalid XML, bad format, etc.)
+ */
+int syntect_load_theme_str(SyntectCtx  *ctx,
+                            const char *theme_xml,
+                            const char *theme_name);
+
+/**
  * Writes a newline-separated, sorted, deduplicated list of all supported file extensions
  * into buf.
  *

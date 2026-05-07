@@ -12,6 +12,7 @@ syntect = { version = "5.3.0", default-features = false, features = [
     "default-syntaxes", # Enables inclusion of the default syntax packages.
     "default-themes",   # Enables inclusion of the default theme packages.
     "regex-onig",       # Use the Oniguruma regex engine
+    "plist-load",       # Support for parsing .tmTheme files and .tmPreferences files
 ] }
 
 # Favor minimal binary size

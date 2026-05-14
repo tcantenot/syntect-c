@@ -21,7 +21,7 @@ Static libraries embed debug info directly.
 ### Using git submodule and CMake
 
 ```bash
-git submodule add <url> third_party/syntect-c
+git submodule add https://github.com/tcantenot/syntect-c.git third_party/syntect-c
 git submodule update --init
 ```
 
@@ -130,7 +130,8 @@ typedef void *(*syntect_alloc_fn)(size_t size, void * userdata);
 
 ```c
 // malloc-backed — free with free()
-static void * heap_alloc(size_t size, void * userdata) {
+static void * heap_alloc(size_t size, void * userdata)
+{
     (void)userdata;
     return malloc(size);
 }
@@ -139,7 +140,8 @@ fputs(hl, stdout);
 free(hl);
 
 // Arena-backed — no individual free needed
-static void * arena_alloc(size_t size, void * userdata) {
+static void * arena_alloc(size_t size, void * userdata)
+{
     return arena_push((Arena *)userdata, size);
 }
 char * hl2 = syntect_highlight(ctx, code, code_len, "rs", "InspiredGitHub", arena_alloc, &my_arena);
@@ -159,14 +161,16 @@ typedef void (*syntect_item_callback)(const char * item, void * userdata);
 
 ```c
 // Simple: print each item
-static void print_item(const char * item, void * userdata) {
+static void print_item(const char * item, void * userdata)
+{
     (void)userdata;
     puts(item);
 }
 syntect_list_themes(ctx, print_item, NULL);
 
 // Collect into a dynamic array
-static void collect(const char *item, void *userdata) {
+static void collect(const char *item, void *userdata)
+{
     MyArray * arr = userdata;
     array_push(arr, strdup(item));
 }
